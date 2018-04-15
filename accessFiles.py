@@ -167,4 +167,5 @@ def delete(line=None, description=None, username=None, password=None): ###CALLS 
 def prioritize(line=None, description=None, username=None, password=None): ###CALLS PRIORITIZER FUNC
     handle = CSVHandler()
     return handle.prioritizer(line, description, username, password)
+    
 def wipeall(): FileHandler.deleteFolder() ###DELETES ALL DATA AND FOLDER DATA IS STORED IN, USEFUL FOR WHEN USER IS DELETING APP
