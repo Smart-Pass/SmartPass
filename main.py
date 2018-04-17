@@ -11,6 +11,7 @@ editor_directory=os.getcwd()
 from tkinter import *
 from tkinter import messagebox
 from tkinter.filedialog import askdirectory,askopenfilename
+from tkinter.ttk import Progressbar
 from accessFiles import add,read,delete,prioritize,wipeall
 from accessFiles import FileHandler
 
@@ -47,7 +48,7 @@ def getStrength(password): #password strength checker
     tally+=len(re.findall(pattern, password))*5
     return tally
 
-''' EXPERIMENTAL [ABOUT MENU BAR] (WILL ADD IN FUTURE VERSIONS)          
+         
 def about_menu(selector): #handles all functions related to the "About" menu; arg 'selector' specifies which of the 3 menu options were selected
     aboutWindow=Tk()
     def manage_about(*event):
@@ -75,9 +76,9 @@ def about_menu(selector): #handles all functions related to the "About" menu; ar
         aboutWindow.mainloop()
     except: aboutmenu.entryconfig(("About the Software" if selector==1 else "Updates" if selector==2 else "Help"),state='normal') #otherwise, reset the "About" Menu button and move on.
 #when received, call about_menu() to open the right window (done for abstraction and because arguments cannot be passed through button commands)
-'''
 
-def new_login(): #lets user save a new login to the data file
+
+def new_login(edit=False,fillers=None): #lets user save a new login to the data file
     createWindow=Tk()
     priority=IntVar(createWindow)
     b_new_login.config(state='disabled')
@@ -89,22 +90,38 @@ def new_login(): #lets user save a new login to the data file
             b_access_login.config(state='normal')
         except: pass
     def register(*event): #register/save the login to the data file
-        if len(str(e_description.get()))>0 and len(str(e_username.get()))>0 and len(str(e_password.get()))>0:
-            add(str(e_description.get()),str(e_username.get()),str(e_password.get())) #add() function written by my partner (encrypts and writes the information to data file)
-            if priority.get()==1: prioritize(description=str(e_description.get())) #prioritize() function written by my partner (puts the login as first item of aggregator)
-            destroy_window()
+        description=str(e_description.get())
+        passed=True #tracks whether the description passes the "doesnt already exist" test
+        if len(str(description))>0 and len(description)>0 and len(str(e_password.get()))>0: #checks to see if all fields are filled in
+            for i in range(int(read()[1])): #check if entered description already exists
+                if str(read()[0][i][0])!=description or edit==True: #if itereated description mathces what the user entered...
+                    pass
+                else:
+                    l_descf.configure(text="Description already exists")
+                    l_descf.grid()
+                    passed=False #mark as fail if description already exists
+                    break
+            if passed==True: #only register if passed test
+                if edit==True: delete(description==fillers[0])
+                l_descf.grid_remove()
+                add(str(e_description.get()),str(e_username.get()),str(e_password.get())) #add() function written by my partner (encrypts and writes the information to data file)
+                if priority.get()==1: prioritize(description=str(e_description.get())) #prioritize() function written by my partner (puts the login as first item of aggregator)
+                destroy_window()
+                if edit==True: access_login()
         else:
-            if len(str(e_description.get()))==0: l_descf.grid()
+            if len(str(e_description.get()))==0:
+                l_descf.configure(text="*Required Field")
+                l_descf.grid()
             else: l_descf.grid_remove()
             if len(str(e_username.get()))==0: l_userf.grid()
             else: l_descf.grid_remove()
             if len(str(e_password.get()))==0: l_passf.grid()
             else: l_passf.grid_remove()
-    createWindow.title("Save a New Login")
+    createWindow.title("Save a New Login" if edit==False else "Edit a Login")
     createWindow.geometry(str(int(user32.GetSystemMetrics(0)/3))+'x'+str(int(user32.GetSystemMetrics(1)/3))) #sets screen size to a third of the monitor size
     windowSetup(createWindow)
     configGrid(createWindow,5,2)
-    Label(createWindow,text="Save a Login",font=("Times New Roman",25)).grid(row=0,column=0,columnspan=3,padx=10,pady=0,sticky="W")
+    Label(createWindow,text="Save a Login" if edit==False else "Edit a Login",font=("Times New Roman",25)).grid(row=0,column=0,columnspan=3,padx=10,pady=0,sticky="W")
     Label(createWindow,text="Description:",font=("Calibri")).grid(row=1,column=0,sticky='W',padx=20)
     Label(createWindow,text="Username/Email:",font=("Calibri")).grid(row=2,column=0,sticky='W',padx=20)
     Label(createWindow,text="Password:",font=("Calibri")).grid(row=3,column=0,sticky='W',padx=20)
@@ -114,6 +131,10 @@ def new_login(): #lets user save a new login to the data file
     e_username.grid(row=2,column=1,sticky='W')
     e_password=Entry(createWindow,width=40,show='*')
     e_password.grid(row=3,column=1,sticky='W')
+    if edit==True:
+        e_description.insert(0,fillers[0])
+        e_username.insert(0,fillers[1])
+        e_password.insert(0,fillers[2])
     b_showpassword=Button(createWindow,text="Show",width=5)
     b_showpassword.grid(row=3,column=1,sticky='E')
     def show(event):e_password.configure(show='')
@@ -153,7 +174,7 @@ def access_login(): #decrypts and displays all the user's logins in a file-direc
     accessWindow.resizable(True,False)
     windowSetup(accessWindow)
     accessWindow.title("Access My Logins")
-    accessWindow.geometry('1000x575')
+    accessWindow.geometry('1060x575')
     listmode=IntVar(accessWindow)
     listmode.set(1) #settings default to sorting data by priority 
     topLayer=Frame(accessWindow)
@@ -168,8 +189,24 @@ def access_login(): #decrypts and displays all the user's logins in a file-direc
             b_access_login.config(state='normal')
             b_new_login.config(state='normal')
         except: pass
-        
+    def i_delete(data,index):
+        result=messagebox.askyesno("Delete this login?","Are you sure you want to delete the following login?\nDescription: "+str(data[index]))
+        if result==True:
+            delete(description=str(data[index]))
+            destroy_window()
+            access_login()
+        else:
+            pass
+    def i_edit(data,index):
+        fillers=[
+            str(data[index]),
+            str(read(description=data[index])[1]),
+            str(read(description=data[index])[2]),
+            ]
+        destroy_window()
+        new_login(edit=True,fillers=fillers)
     def populate(frame,data): #populates the scroll frame with login data from the data file
+        choice=StringVar(frame)
         for widget in frame.winfo_children(): widget.destroy() #clears the frame before populating it
         if len(data)>0:
             b_deleteall.configure(state='normal')
@@ -186,8 +223,13 @@ def access_login(): #decrypts and displays all the user's logins in a file-direc
                 Label(frame,text=password if len(password)<29 else password[:29]+' ...',width=30,bg="light grey" if x==1 else "white",anchor='w').grid(row=data.index(login),column=3)
                 Label(frame,text=strengthlevel,width=15,
                     bg="light grey" if x==1 else "white",
-                    fg='green' if strengthlevel=="Strong" else 'orange' if strengthlevel=="Fair" else 'red',
+                    fg='dark green' if strengthlevel=="Strong" else 'orange' if strengthlevel=="Fair" else 'red',
                     anchor='w').grid(row=data.index(login),column=4,sticky='EW')
+                
+                b_edit=Button(frame,text="Edit",command=lambda i=data.index(login): i_edit(data=data,index=i))
+                b_edit.grid(row=data.index(login),column=5)
+                b_close=Button(frame,text='X',command=lambda i=data.index(login): i_delete(data=data,index=i),width=2)
+                b_close.grid(row=data.index(login),column=6,padx=3,pady=3 if x==0 else 0)
                 x=1 if x==0 else 0
         else:
             b_deleteall.configure(state='disabled')
@@ -198,7 +240,7 @@ def access_login(): #decrypts and displays all the user's logins in a file-direc
     #display logins
     display=Frame(accessWindow,width=550,height=225)
     display.grid(row=3,column=0,columnspan=5,sticky="NSEW",padx=20)
-    configGrid(display,0,4)
+    configGrid(display,0,6)
     scroll=Scrollbar(accessWindow,orient="vertical",command=canvas.yview)
     scroll.grid(row=2,column=4,sticky="NSE",padx=20)
     canvas.configure(yscrollcommand=scroll.set)
@@ -252,11 +294,20 @@ def access_login(): #decrypts and displays all the user's logins in a file-direc
             except: pass
     bottom=Frame(accessWindow)
     bottom.grid(row=3,column=0,columnspan=5,sticky="NSEW")
-    Button(bottom,text="Close",command=destroy_window,width=10).pack(padx=10,pady=20,side=RIGHT)
+    configGrid(bottom,0,4)
+    Button(bottom,text="Close",command=destroy_window,width=10).grid(padx=10,pady=20,row=0,column=4)
     b_deleteall=Button(bottom,text="Delete All",command=verifydelete,width=10)
-    b_deleteall.pack(pady=20,side=RIGHT)
+    b_deleteall.grid(pady=20,row=0,column=3)
     l_results=Label(bottom)
-    l_results.pack(side=LEFT,padx=20)
+    l_results.grid(row=0,column=0,padx=20)
+    load=Frame(bottom,width=750)
+    load.grid(row=0,column=1,columnspan=2)
+    progress=Progressbar(load,orient=HORIZONTAL,length=500,mode='determinate')
+    progress.grid(row=0,column=1)
+    l_loading=Label(load,text='Loading...',anchor='w',width=35)
+    l_loading.grid(row=0,column=2)
+    progress.grid_remove() 
+    l_loading.grid_remove() 
     canvas.grid(row=2,column=0,columnspan=5,sticky="NSEW",padx=20)
     topLayer.tkraise()
     labels.tkraise()
@@ -403,14 +454,14 @@ optionsmenu.add_checkbutton(label="Screen Resizable",onvalue=1,offvalue=0,variab
 optionsmenu.add_command(label="Reset Default Screen Size",command=lambda: mainWindow.geometry(str(int(user32.GetSystemMetrics(0)/3))+'x'+str(int(user32.GetSystemMetrics(1)/3))))
 menubar.add_cascade(label="Options",menu=optionsmenu)
 
-'''#EXPERIMENTAL [ABOUT MENU BAR] (WILL ADD IN LATER VERSIONS)
+
 aboutmenu=Menu(menubar,tearoff=0)
 aboutmenu.add_command(label="About the Software",command=lambda:[about_menu(selector=1),aboutmenu.entryconfig("About the Software",state='disabled')]) #FEATURES,FUNCTION,ETC. OF SOFTWARE
 aboutmenu.add_command(label="Updates",command=lambda:[about_menu(selector=2),aboutmenu.entryconfig("Updates",state='disabled')]) #UPDATES
 aboutmenu.add_separator()
 aboutmenu.add_command(label="Help",command=lambda:[about_menu(selector=3),aboutmenu.entryconfig("Help",state='disabled')]) # TROUBLESHOOTING, HOW TO USE
 menubar.add_cascade(label="About",menu=aboutmenu)
-'''
+
 mainWindow.config(menu=menubar)
 
 #buttons
