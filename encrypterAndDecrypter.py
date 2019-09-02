@@ -5,10 +5,12 @@ from random import randint
 from base64 import b64encode, b64decode
 from hashlib import sha512 as shake
 from re import findall
-          
-###IT IS IMPORTANT TO NOTE THAT THIS ENCRYPTION IS VERY MUCH BASED OFF OF AES256 ENCRYPTION, AND ALTHOUGH MY ENCRYPTION IS MOST LIKELY NOTHING LIKE IT, IT WILL DO THE JOB
+
 class Cipher(): ###ENCRYPTION AND DECRYPTION CLASS
     
+    ###--------------self.nums_key, self.pad, and self.unpad were taken from link below--------------###
+    #####https://stackoverflow.com/questions/12524994/encrypt-decrypt-using-pycrypto-aes-256#####
+    ########## Written by "mnothic" and edited by "gregoltsov" ##########
     def __init__(self, key): ###INITIALIZES CIPHER AND EVERYTHING NEEDED TO ENCRYPT AND DECRYPT
         self.nums_key = list(map(lambda x: ord(chr(x)), shake(key.encode()).digest())) #64 nums long
         self.block_size = 64 #block_size is 64 cause key must be 64 characters long
@@ -26,10 +28,14 @@ class Cipher(): ###ENCRYPTION AND DECRYPTION CLASS
             ciphertext += str(len(b64encode(plaintext.encode()).decode())) + "-\!="
         else: ###ELSE INTERTWINE THE ENCRYPTED AND THE RANDOM
             ciphertext = self.intertwine(encrypted, random)
-        return ciphertext.encode() 
+        return ciphertext.encode()
         
     def encRoundOne(self, msg): ###ROUND ONE OF ENCRYPTION
         round1 = []
+        nums_key_matched = self.nums_key
+        for c in range(len(msg) - len(nums_key_matched)):
+            nums_key_matched.append(self.nums_key[c])
+
         for i in range(len(msg)):
             round1.append(msg[i] + self.nums_key[i]) ###adds each number of the msg and the corresponding number of the key
         return round1
@@ -62,8 +68,11 @@ class Cipher(): ###ENCRYPTION AND DECRYPTION CLASS
         
     def decRoundOne(self, msg): ###ROUND ONE OF DECRYPTION
         round1 = []
+        nums_key_matched = self.nums_key
+        for c in range(len(msg) - len(nums_key_matched)):
+            nums_key_matched.append(self.nums_key[c])
         for i in range(len(msg)):
-            round1.append(abs(msg[i] - self.nums_key[::-1][i]))
+            round1.append(abs(msg[i] - nums_key_matched[::-1][i]))
         return round1
         
     def decRoundTwo(self, msg): ###ROUND TWO OF DECRYPTION
