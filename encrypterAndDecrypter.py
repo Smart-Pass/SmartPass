@@ -12,7 +12,9 @@ class Cipher(): ###ENCRYPTION AND DECRYPTION CLASS
     #####https://stackoverflow.com/questions/12524994/encrypt-decrypt-using-pycrypto-aes-256#####
     ########## Written by "mnothic" and edited by "gregoltsov" ##########
     def __init__(self, key): ###INITIALIZES CIPHER AND EVERYTHING NEEDED TO ENCRYPT AND DECRYPT
-        self.nums_key = list(map(lambda x: ord(chr(x)), shake(key.encode()).digest())) #64 nums long
+        #self.nums_key = list(map(lambda x: ord(chr(x)), shake(key.encode()).digest())) #64 nums long
+        self.shooketh = shake(key.encode()).digest()
+        self.nums_key = list(map(lambda x: ord(chr(x)), self.shooketh)) #_#change ord(chr(x)) to ord(x)#_#
         self.block_size = 64 #block_size is 64 cause key must be 64 characters long
         self.pad = lambda s: s + (self.block_size - len(s) % self.block_size) * chr(self.block_size - len(s) % self.block_size) ###pads the password to be 64 characters long
         self.unpad = lambda s: s[:-ord(s[len(s)-1:])] ###unpads to its orginal character length
@@ -60,7 +62,8 @@ class Cipher(): ###ENCRYPTION AND DECRYPTION CLASS
         else: ###ELSE IT WAS ENCODED NORMALLY AND SHOULD BE DECRYPTED BY REVERSING ROUND ONE AND TWO
             ciphertext = ciphertext.decode()[11:] ###first it needs to cut off the random string
             encrypted = ciphertext[::2]
-            chars_encrypted = b64decode(encrypted.encode()).decode()
+            chars_encrypted_ = b64decode(encrypted.encode())#.decode() #_#b64decode(unicode(encrypted.encode()))#_#
+            chars_encrypted = chars_encrypted_.decode() #_#something is wrong here#_#
             nums_encrypted = list(map(lambda x: ord(x), chars_encrypted))
             nums_pass = self.decRoundTwo(self.decRoundOne(nums_encrypted))
             plaintext = self.unpad("".join(list(map(lambda x: chr(x), nums_pass))))
