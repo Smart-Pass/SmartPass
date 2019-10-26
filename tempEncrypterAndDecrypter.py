@@ -1,5 +1,5 @@
-encrypt(ptext):
-    pass
+def encrypt(ptext):
+    return ptext.encode()
 
-decrypt(ctext):
-    pass
+def decrypt(ctext):
+    return ctext.decode()
