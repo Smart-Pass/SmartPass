@@ -1,11 +1,13 @@
 '''
 File Management module for SmartPass
 '''
+from datetime import datetime
 import subprocess
 import os
 import shutil
 import csv
-from encrypterAndDecrypter import encrypt, decrypt
+#from encrypterAndDecrypter import encrypt, decrypt
+from tempEncrypterAndDecrypter import encrypt, decrypt
 
 class FileProperties(): ###HOLDS FILE PROPERTIES LIKE HIDING AND SHOWING FILE
     
@@ -36,10 +38,11 @@ class CSVHandler(): ###DOES EVERYTHING WITH THE CSV FILE
         self.description = description
         self.username = username
         self.password = password
+        self.dateStamp = str(datetime.now().date().month) + "/" + str(datetime.now().date().day) + "/" + str(datetime.now().date().year)
         
         passwords = self.reader(None, None)[0] ###ADDS WHATEVER IS IN CSV FILE RIGHT NOW TO DATA, THEN ADDS NEW ENCRYPTED PASSWORD TO DATA AS WELL  
-        for element in passwords: self.data.append([encrypt(element[0]), encrypt(element[1]), encrypt(element[2])])
-        self.data.append([encrypt(description), encrypt(username), encrypt(password)])
+        for element in passwords: self.data.append([encrypt(element[0]), encrypt(element[1]), encrypt(element[2]), encrypt(element[3])]) #$encrypt(element[3])$#
+        self.data.append([encrypt(description), encrypt(username), encrypt(password), encrypt(self.dateStamp)]) #$encrypt(self.dateStamp)$#
         
         FileProperties.showFile(self.secret_filename)
         with open(self.secret_filename, "w", newline='') as f:
@@ -56,19 +59,21 @@ class CSVHandler(): ###DOES EVERYTHING WITH THE CSV FILE
                 for row in reader:
                     if row == []: continue ###without this, csv file would make unecessary and random empty rows 
                     else:
-                        passwords.append([decrypt(row[0][2:-1].encode()), decrypt(row[1][2:-1].encode()), decrypt(row[2][2:-1].encode())])
+                        passwords.append([decrypt(row[0][2:-1].encode()), decrypt(row[1][2:-1].encode()), decrypt(row[2][2:-1].encode()), decrypt(row[3][2:-1].encode())]) #$$#
                         i += 1
                 return passwords, i
             elif line != None: ###if line has an value other than None, read that specific line
                 for row in reader:
                     i += 1
                     if line == i:
-                        return [decrypt(row[0][2:-1].encode()), decrypt(row[1][2:-1].encode()), decrypt(row[2][2:-1].encode())]
+                        return [decrypt(row[0][2:-1].encode()), decrypt(row[1][2:-1].encode()), decrypt(row[2][2:-1].encode()), decrypt(row[3][2:-1].encode())] #$$#
             elif description != None: ###if description has a value other than None, read from that description
+                elements = []
                 passwords = self.reader(None, None)[0]
                 for element in passwords:
                     if description == element[0]:
-                        return element
+                        elements.append(element)
+                return elements #$$returns a list, not a single description$$#
             
             else: raise ValueError("Arguments not inputted correctly") ###if for some reason none of the above statements are called, raise this error
     
@@ -90,7 +95,7 @@ class CSVHandler(): ###DOES EVERYTHING WITH THE CSV FILE
                     passwords.remove(element)
         else: raise ValueError("Arguments not inputted correctly") ###if not going through if statements, arguments aren't inputted correctly
         
-        for password in passwords: self.data.append([encrypt(password[0]), encrypt(password[1]), encrypt(password[2])]) ###REWRITES FILE WITH NEW DATA
+        for password in passwords: self.data.append([encrypt(password[0]), encrypt(password[1]), encrypt(password[2]), encrypt(password[3])]) ###REWRITES FILE WITH NEW DATA
         
         FileProperties.showFile(self.secret_filename)
         with open(self.secret_filename, "w", newline='') as f:
@@ -120,13 +125,16 @@ class CSVHandler(): ###DOES EVERYTHING WITH THE CSV FILE
                 if password == element[2]: passwords.insert(0, passwords.pop(i-1))
         else: raise ValueError("Arguments not inputted correctly (One argument must be equal to something other than None)") ###all aruments are equal to None, which can't happen, so error is raised
           
-        for password in passwords: self.data.append([encrypt(password[0]), encrypt(password[1]), encrypt(password[2])]) ###REWRITES FILE WITH NEW DATA
+        for password in passwords: self.data.append([encrypt(password[0]), encrypt(password[1]), encrypt(password[2]), encrypt(password[3])]) ###REWRITES FILE WITH NEW DATA
         
         FileProperties.showFile(self.secret_filename)
         with open(self.secret_filename, "w", newline='') as f:
             writer = csv.writer(f)
             writer.writerows(self.data)
-        FileProperties.hideFile(self.secret_filename)    
+        FileProperties.hideFile(self.secret_filename)
+
+    def sorter(self, description, username, password, dateStamp, isIncreasing): #orginally set to false
+        passwords = self.reader(None, None)[0]
             
             
 class FileHandler(CSVHandler): ###GIVES USER ACCESS TO FILE
