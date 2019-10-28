@@ -38,17 +38,14 @@ class CSVHandler(): ###DOES EVERYTHING WITH THE CSV FILE
         self.description = description
         self.username = username
         self.password = password
-        self.dateStamp = str(datetime.now().date().month) + "/" + str(datetime.now().date().day) + "/" + str(datetime.now().date().year)
+        self.dateStamp = str(datetime.now().date().month) + "/" + str(datetime.now().date().day) + "/" + str(datetime.now().date().year) + " (" + str(datetime.now().time()) + ")"
+        print(self.dateStamp)
         
-        passwords = self.reader(None, None)[0] ###ADDS WHATEVER IS IN CSV FILE RIGHT NOW TO DATA, THEN ADDS NEW ENCRYPTED PASSWORD TO DATA AS WELL  
+        passwords = self.grabEverything() ###ADDS WHATEVER IS IN CSV FILE RIGHT NOW TO DATA, THEN ADDS NEW ENCRYPTED PASSWORD TO DATA AS WELL  
         for element in passwords: self.data.append([encrypt(element[0]), encrypt(element[1]), encrypt(element[2]), encrypt(element[3])]) #$encrypt(element[3])$#
         self.data.append([encrypt(description), encrypt(username), encrypt(password), encrypt(self.dateStamp)]) #$encrypt(self.dateStamp)$#
-        
-        FileProperties.showFile(self.secret_filename)
-        with open(self.secret_filename, "w", newline='') as f:
-            writer = csv.writer(f)
-            writer.writerows(self.data) ###rewrites csv file with data
-        FileProperties.hideFile(self.secret_filename)
+
+        self.write()
         
     def reader(self, line, description): ###READS WHOLE CSV FILE; IF LINE IS SPECIFIED AS SOMETHING OTHER THAN NONE, JUST READS PASSWORD CONTAINED IN THAT LINE
         with open(self.secret_filename, "r") as f:
@@ -59,14 +56,14 @@ class CSVHandler(): ###DOES EVERYTHING WITH THE CSV FILE
                 for row in reader:
                     if row == []: continue ###without this, csv file would make unecessary and random empty rows 
                     else:
-                        passwords.append([decrypt(row[0][2:-1].encode()), decrypt(row[1][2:-1].encode()), decrypt(row[2][2:-1].encode()), decrypt(row[3][2:-1].encode())]) #$$#
+                        passwords.append([decrypt(row[0][2:-1].encode()), decrypt(row[1][2:-1].encode()), decrypt(row[2][2:-1].encode()), decrypt(row[3][2:12].encode())]) #$$#
                         i += 1
                 return passwords, i
             elif line != None: ###if line has an value other than None, read that specific line
                 for row in reader:
                     i += 1
                     if line == i:
-                        return [decrypt(row[0][2:-1].encode()), decrypt(row[1][2:-1].encode()), decrypt(row[2][2:-1].encode()), decrypt(row[3][2:-1].encode())] #$$#
+                        return [decrypt(row[0][2:-1].encode()), decrypt(row[1][2:-1].encode()), decrypt(row[2][2:-1].encode()), decrypt(row[3][2:12].encode())] ###[2:-1] gets rid of b' in beginning and ' in end. [2:12] gets rid of time login was created
             elif description != None: ###if description has a value other than None, read from that description
                 elements = []
                 passwords = self.reader(None, None)[0]
@@ -78,7 +75,7 @@ class CSVHandler(): ###DOES EVERYTHING WITH THE CSV FILE
             else: raise ValueError("Arguments not inputted correctly") ###if for some reason none of the above statements are called, raise this error
     
     def deleter(self, line, description, username, password): ###DELETES EVERYTHING ON CSV FILE; IF LINE IS SPECIFIED AS SOMETHING OTHER THAN NONE, JUST DELETES PASSWORD CONTAINED IN THAT LINE; IF PASSWORD IS SPECIFIED AS SOMETHING OTHER THAN NONE, JUST DELETES PASSWORD
-        passwords = self.reader(None, None)[0]
+        passwords = self.grabEverything()
         if line == description == username == password == None: passwords = [] ###if no arguments specified, delete everything
         elif line != None: del passwords[line-1] ###delete the line specified
         elif description != None: ###look for the description and delete 
@@ -97,11 +94,7 @@ class CSVHandler(): ###DOES EVERYTHING WITH THE CSV FILE
         
         for password in passwords: self.data.append([encrypt(password[0]), encrypt(password[1]), encrypt(password[2]), encrypt(password[3])]) ###REWRITES FILE WITH NEW DATA
         
-        FileProperties.showFile(self.secret_filename)
-        with open(self.secret_filename, "w", newline='') as f:
-            writer = csv.writer(f)
-            writer.writerows(self.data)
-        FileProperties.hideFile(self.secret_filename)
+        self.write()
         
     def prioritizer(self, line, description, username, password): ###ALLOWS FOR A SPECIFIC LINE, DESCRIPTION, USERNAME, OR PASSWORD TO BE PRIORITIZED TO BE AT THE TOP OF THE LIST
         passwords = self.reader(None, None)[0]
@@ -126,15 +119,40 @@ class CSVHandler(): ###DOES EVERYTHING WITH THE CSV FILE
         else: raise ValueError("Arguments not inputted correctly (One argument must be equal to something other than None)") ###all aruments are equal to None, which can't happen, so error is raised
           
         for password in passwords: self.data.append([encrypt(password[0]), encrypt(password[1]), encrypt(password[2]), encrypt(password[3])]) ###REWRITES FILE WITH NEW DATA
+
+        self.write()
+
+    def sorter(self, description, username, password, dateStamp, isIncreasing): ###SORTS LOGINS ACCORDING TO WHICHEVER PARAMETER IS TRUE. ISINCREASING REVERSES SORT DEPENDING ON ITS BOOLEAN VALUE
+        passwords = self.grabEverything()
         
+        if dateStamp == True: ###sort by the dates each login information was created
+            dateStamps = []
+            for arr in passwords:
+                dateStamps.append(arr[3]) ###pull out only dates out of each login
+            sortedStamps = sorted(dateStamps, key = lambda date: datetime.strptime(date, "%m/%d/%Y (%H:%M:%S.%f)"), reverse=not(isIncreasing)) ###sort each date and assign to new variable
+            for stamp in sortedStamps: ###use sorted list and unsorted list to get index of date in old list, grab index of login from original list, then sort and assign to self.data
+                for i in range(len(dateStamps)):
+                    if stamp == dateStamps[i]:
+                        self.data.append([encrypt(passwords[i][0]), encrypt(passwords[i][1]), encrypt(passwords[i][2]), encrypt(passwords[i][3])])
+
+            self.write()
+
+    def write(self): ###IS USED TO ACTUALLY WRITE EACH CSV FILE. USED ONLY WITHIN THE CLASS
         FileProperties.showFile(self.secret_filename)
         with open(self.secret_filename, "w", newline='') as f:
             writer = csv.writer(f)
-            writer.writerows(self.data)
+            writer.writerows(self.data) ###rewrites csv file with data
         FileProperties.hideFile(self.secret_filename)
 
-    def sorter(self, description, username, password, dateStamp, isIncreasing): #orginally set to false
-        passwords = self.reader(None, None)[0]
+    def grabEverything(self): ###SIMILAR TO READER FUNCTION EXCEPT GRABS EVERY BIT OF DATA. USED ONLY WITHIN THE CLASS
+        logins = []
+        with open(self.secret_filename, "r") as f:
+            reader = csv.reader(f)
+            for row in reader:
+                if row == []: continue
+                else:
+                    logins.append([decrypt(row[0][2:-1].encode()), decrypt(row[1][2:-1].encode()), decrypt(row[2][2:-1].encode()), decrypt(row[3][2:-1].encode())])
+        return logins
             
             
 class FileHandler(CSVHandler): ###GIVES USER ACCESS TO FILE
@@ -172,8 +190,13 @@ def delete(line=None, description=None, username=None, password=None): ###CALLS 
     handle = CSVHandler()
     return handle.deleter(line, description, username, password)
 
+def sort_(description=False, username=False, password=False, dateStamp=True, isLowerToHigher=True): ###CALLS SORTER FUNC
+    handle = CSVHandler() 
+    return handle.sorter(description, username, password, dateStamp, isLowerToHigher)
+
 def prioritize(line=None, description=None, username=None, password=None): ###CALLS PRIORITIZER FUNC
     handle = CSVHandler()
     return handle.prioritizer(line, description, username, password)
     
 def wipeall(): FileHandler.deleteFolder() ###DELETES ALL DATA AND FOLDER DATA IS STORED IN, USEFUL FOR WHEN USER IS DELETING APP
+
