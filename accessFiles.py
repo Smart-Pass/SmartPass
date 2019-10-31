@@ -39,7 +39,6 @@ class CSVHandler(): ###DOES EVERYTHING WITH THE CSV FILE
         self.username = username
         self.password = password
         self.dateStamp = str(datetime.now().date().month) + "/" + str(datetime.now().date().day) + "/" + str(datetime.now().date().year) + " (" + str(datetime.now().time()) + ")"
-        print(self.dateStamp)
         
         passwords = self.grabEverything() ###ADDS WHATEVER IS IN CSV FILE RIGHT NOW TO DATA, THEN ADDS NEW ENCRYPTED PASSWORD TO DATA AS WELL  
         for element in passwords: self.data.append([encrypt(element[0]), encrypt(element[1]), encrypt(element[2]), encrypt(element[3])]) #$encrypt(element[3])$#
@@ -124,8 +123,21 @@ class CSVHandler(): ###DOES EVERYTHING WITH THE CSV FILE
 
     def sorter(self, description, username, password, dateStamp, isIncreasing): ###SORTS LOGINS ACCORDING TO WHICHEVER PARAMETER IS TRUE. ISINCREASING REVERSES SORT DEPENDING ON ITS BOOLEAN VALUE
         passwords = self.grabEverything()
-        
-        if dateStamp == True: ###sort by the dates each login information was created
+
+        def descriptionSort(): ###sort by description in alphabetical order
+            descriptions = []
+            for arr in passwords:
+                descriptions.append(arr[0]) ###pull out descriptions out of each login
+            sortedDescriptions = sorted(descriptions, reverse=not(isIncreasing))
+            for description in sortedDescriptions:
+                for i in range(len(descriptions)):
+                    if description == descriptions[i]:
+                        self.data.append([encrypt(passwords[i][0]), encrypt(passwords[i][1]), encrypt(passwords[i][2]), encrypt(passwords[i][3])])
+                        del descriptions[i]
+                        del passwords[i]
+                        break
+
+        def dateSort(): ###sort by the dates each login information was created
             dateStamps = []
             for arr in passwords:
                 dateStamps.append(arr[3]) ###pull out only dates out of each login
@@ -135,7 +147,9 @@ class CSVHandler(): ###DOES EVERYTHING WITH THE CSV FILE
                     if stamp == dateStamps[i]:
                         self.data.append([encrypt(passwords[i][0]), encrypt(passwords[i][1]), encrypt(passwords[i][2]), encrypt(passwords[i][3])])
 
-            self.write()
+        if description: descriptionSort()
+        elif dateStamp: dateSort()
+        self.write()
 
     def write(self): ###IS USED TO ACTUALLY WRITE EACH CSV FILE. USED ONLY WITHIN THE CLASS
         FileProperties.showFile(self.secret_filename)
@@ -190,7 +204,7 @@ def delete(line=None, description=None, username=None, password=None): ###CALLS 
     handle = CSVHandler()
     return handle.deleter(line, description, username, password)
 
-def sort_(description=False, username=False, password=False, dateStamp=True, isLowerToHigher=True): ###CALLS SORTER FUNC
+def sort_(description=False, username=False, password=False, dateStamp=False, isLowerToHigher=True): ###CALLS SORTER FUNC
     handle = CSVHandler() 
     return handle.sorter(description, username, password, dateStamp, isLowerToHigher)
 
