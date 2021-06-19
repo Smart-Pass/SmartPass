@@ -16,7 +16,7 @@ If you believe it is better (which it always should be because we should let eac
 
 
 # Finally,
-Let's make this an amazing app, one that will make sure we get first motherfreaking place at that competition!
+Let's make this an amazing app, one that will make sure we get first place at that competition!
 Update ideas (Bryan especially) are very much appreciated.
 Put any ideas you have, even if you think they are dumb, to the updates text channel on discord.
 
